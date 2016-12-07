@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>MineSweeper</title>
+  <style>
+    .box {
+      float:left;
+      height: 50px;
+      width: 50px;
+      border: 10px 10px;
+      border: solid;
+      border-color: white;
+      background-color: gray;
+      color: gray;
+    }
+    .box:hover {
+      background-color: lightgray;
+    }
+    .row::after {
+      display:block;
+      clear: both;
+      content: "";
+    }
+  </style>
+</head>
+<body>
+<div id="mineGrid"></div>
+<div class="row"></div>
+<h2>Instructions:</h2>
+<p>Find the 15 bombs on the board.</p>
+<p>Single Click: Add/Remove Question Mark<br>
+Double Click: Test Location for Bomb</p>
+<button id="newGame">Play a New Game</button>
+
+<script>
+  /**
+   *
+   * MineSweeper Game
+   * Author: Eddie Sung
+   *
+   *
+     */
+
+  //BELOW: Bomb locations are stored in array, array is populated using assignBombs()
+  var bombLocs=[];
+
+  //BELOW: Clicks are stored in array.  When a div element is clicked, it is also disabled to prevent duplicates.
+  var clicked=[];
+
+
+  /**
+   * Init Summary:
+   * -Creates html grid
+   * -Assigns random bombs to bombLocs array
+   * -Adds "click" and "doubleclick" properties to html grid.
+   * -Adds page reload function to newGame button.
+   */
+   window.onload = init;
+  function init(){
+    createGrid();   //create grid
+    addGridEvents();//assign "click" and "double click" event handlers to grid
+    assignBombs();  //assign random bomb locations to bombLocs[]
+    newGame();  //set newGame button to reload page
+  }
+
+  /**
+   * @function newGame()
+   * Assigns "click" event to <button id="newGame"> and function location.reload()
+   */
+  function newGame(){
+    document.getElementById("newGame").addEventListener("click", function(){location.reload();}, false);
+  }
+
+  /**
+   * @function createGrid()
+   * Creates a HTML grid of <div> tags
+   * Rows: <div class="row">
+   * Columns: <div class="box" id="{[id]}">
+   */
+
+  function createGrid() {
+    for (var i = 0; i < 10; i++) {
+      document.getElementById('mineGrid').innerHTML += "<div class='row'>";
+      for (var j = 0; j < 10; j++) {
+        var id = i.toString() + j.toString();
+        document.getElementById('mineGrid').innerHTML += `<div class="box" id="${id}" ></div>`;
+      }
+      document.getElementById('mineGrid').innerHTML += "</div>";
+    }
+  }
+
+  /**
+   * @function addGridEvents
+   * Attaches "double click" and "click" event handlers to grid <div> tags.
+   */
+  function addGridEvents(){
+    for (var k = 0; k < 10; k++) {
+      for (var l = 0; l < 10; l++) {
+        var id2 = k.toString() + l.toString();
+        document.getElementById(id2).addEventListener("dblclick", checkClick, false);
+        document.getElementById(id2).addEventListener("click", questionBox, false);
+      }
+    }
+  }
+  /**
+   * @function assignBombs()
+   * Adds random locations to bombLocs array.
+   * Default is 15 bombs, code will prevent double entries
+   */
+  function assignBombs(){
+    while (bombLocs.length < 15){ //will assign 5 locations to bombLocs array
+      var tempLocX = Math.floor(Math.random()*10)
+      var tempLocY = Math.floor(Math.random()*10)
+      var tempLocation = (tempLocX.toString() + tempLocY.toString());
+      //BELOW: assigns location only if it doesn't exist in array
+      while (bombLocs.indexOf(tempLocation) === -1){
+        bombLocs.push(tempLocation);
+        console.log(tempLocation);
+      }
+    }
+  }
+  /**
+   * @function questionBox()
+   * This is assigned to "click" event handler in addGridEvents()
+   * For single clicks, this will add and remove "?" from the div element.
+   */
+  function questionBox(){
+    var clickId = this.id;
+    if (document.getElementById(clickId).innerHTML == "") {
+      document.getElementById(clickId).innerHTML = "?";
+      document.getElementById(clickId).setAttribute("style", "color: black; font-size: xx-large; text-align: center");
+    } else {
+      document.getElementById(clickId).innerHTML = "";
+    }
+  }
+  /**
+   * @function checkClick()
+   * This is assigned to "dblclick" event handler in addGridEvents()
+   * 1. Records <div>'s ID in clickId and adds it to clicked array.
+   * 2. Disables <div> element from being reclicked
+   * 3. Check if clickId is a bomb - if so, game is over
+   * 4. Check if not a bomb - if so, count the bombs in the 9 squares surrounding the clickId
+   * 5. Update <div> to reflect the number of surrounding bombs
+   * 6. Check if all non-bomb <div>'s have been clicked - if so, game is won
+   */
+  function checkClick(){
+    var isBomb = false;  //isBomb check
+    var clickId = this.id; //"this" represents html element that was clicked.  In this case, this.id is the <div> element's id.
+
+    //BELOW: If clickId was not previously used, pushes clickId to clicked array.
+    if (clicked.indexOf(clickId) === -1){
+      clicked.push(clickId);
+      //BELOW: when clickId is added to array, button (i.e. div) becomes disabled
+      this.removeEventListener("click", checkClick, false);
+    }
+    //BELOW: If clickId is in bomb location array, then bomb goes off and game is over
+    for (var i = 0; i < bombLocs.length; i++) {
+      if (bombLocs[i] == clickId) {
+        document.getElementById(clickId).innerHTML = "B";
+        document.getElementById(clickId).setAttribute("style", "background-color: red; color: black; font-size: xx-large; text-align: center");
+        setTimeout(function(){alert("Sorry, Game Over.")}, 300);
+        isBomb = true;  //if bomb goes off, isBomb prevents next statement from running
+      }
+    }
+
+    //BELOW: If clickId is not a bomb, then check 9 squares surrounding clickId for bomb.
+    if (isBomb==false) {
+      var count = 0;
+      var clickIdY = parseInt(clickId.charAt(0)); //retrieve first character of clickID
+      var clickIdX = parseInt(clickId.charAt(1)); //retrieve second character of clickID
+      //console.log("x:" + clickIdX + " y:" + clickIdY);
+      //BELOW: For loop checks 9 boxes for bombs
+      for (var j = (clickIdX - 1); j <= (clickIdX + 1); j++) {
+        for (var k = (clickIdY - 1); k <= (clickIdY + 1); k++) {
+          var testForBomb = k.toString() + j.toString();
+          //console.log(testForBomb);
+          if (testForBomb.indexOf("-") == -1){ //checks for negative values( i.e. off the grid)
+            if (bombLocs.indexOf(testForBomb) != -1) { //if grid location exists in bomb location array, then incrase counter by one.
+              count +=1;
+            }
+          }
+        }
+      }
+      //BELOW: Div element is updated to reflect #bombs surrounding click.
+      document.getElementById(clickId).innerHTML = count;
+      document.getElementById(clickId).setAttribute("style", "background-color: lightgray; color: green; font-size: xx-large; text-align: center");
+    }
+    //BELOW: If (clicks + bombLocs == total grid), then person is a winner!
+    if (isBomb == false){
+      if ((100-(clicked.length)) == bombLocs.length){
+        setTimeout(function(){alert("Congrats!  You Won!");}, 300);
+      }
+    }
+  }
+
+</script>
+</body>
+</html>
